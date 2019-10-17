@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="stb_image.h">
+      <Filter>headers\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image_write.h">
+      <Filter>headers\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="ray.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="vec3.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="sphere.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="scene.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="shape.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="bsdf.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="shader_globals.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="triangle.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="vertex.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="camera.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="headers">
+      <UniqueIdentifier>{52dae75d-be2a-45c9-b29f-1a03de5f0d2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{fd9e5656-f344-4831-b33b-7eedf69569c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="headers\stb">
+      <UniqueIdentifier>{f75466fc-8726-43d8-a786-9989be4ef032}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="kernel.cu">
+      <Filter>source</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>
