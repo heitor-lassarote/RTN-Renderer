@@ -10,7 +10,7 @@
 #include "shape.hpp"
 #include "vertex.hpp"
 
-namespace renderer_temporary_name
+namespace rtn
 {
 struct triangle : public shape
 {

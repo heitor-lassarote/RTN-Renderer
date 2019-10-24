@@ -16,9 +16,6 @@
     <ClInclude Include="sphere.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="scene.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="shape.hpp">
       <Filter>headers</Filter>
     </ClInclude>
@@ -35,6 +32,12 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="camera.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="let.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="utility.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

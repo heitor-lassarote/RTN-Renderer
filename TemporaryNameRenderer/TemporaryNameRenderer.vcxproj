@@ -91,14 +91,15 @@
   <ItemGroup>
     <ClInclude Include="bsdf.hpp" />
     <ClInclude Include="camera.hpp" />
+    <ClInclude Include="let.hpp" />
     <ClInclude Include="ray.hpp" />
-    <ClInclude Include="scene.hpp" />
     <ClInclude Include="shader_globals.hpp" />
     <ClInclude Include="shape.hpp" />
     <ClInclude Include="sphere.hpp" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stb_image_write.h" />
     <ClInclude Include="triangle.hpp" />
+    <ClInclude Include="utility.hpp" />
     <ClInclude Include="vec3.hpp" />
     <ClInclude Include="vertex.hpp" />
   </ItemGroup>

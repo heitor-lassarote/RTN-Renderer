@@ -1,9 +1,10 @@
-#include <ctime>
+#include <chrono>
 #include <iostream>
 
-#include "cuda.h"
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <curand_kernel.h>
+#include <device_launch_parameters.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -16,108 +17,71 @@
 #define GLM_FORCE_PURE
 #include <glm/glm.hpp>
 
+#include "let.hpp"
 #include "ray.hpp"
 #include "sphere.hpp"
 #include "triangle.hpp"
 
-#define let auto const
-
-using namespace renderer_temporary_name;
-
-#define check_cuda_errors(val) check_cuda((val), #val, __FILE__, __LINE__)
-void check_cuda(
-    cudaError_t const result,
-    char const *const func,
-    char const *const file,
-    int const line)
-{
-    if (result)
-    {
-        std::cerr
-            << "CUDA error = " << static_cast<unsigned int>(result)
-            << " (" << cudaGetErrorString(result) << ") at "
-            << file << ':' << line << " '" << func << "'\n";
-        cudaDeviceReset();
-        exit(result);
-    }
-}
-
-template<typename T>
-__host__ __device__
-T lerp(T const& a, T const& b, float const t)
-{
-    return (1.0f - t) * a + t * b;
-}
-
-__device__
-glm::vec3 color(ray const& r)
-{
-    sphere const s{ bsdf{ bsdf_type::none, glm::vec3() }, glm::vec3(0.0f, 0.0f, -1.0f), 0.5f };
-    if (intersects(s, r).hit)
-    {
-        return glm::vec3(1.0f, 0.0f, 0.0f);
-    }
-
-    glm::vec3 const unit_direction = glm::normalize(r.direction);
-    float const t = 0.5f * (unit_direction.y + 1.0f);
-    return lerp(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.5f, 0.7f, 1.0f), t);
-}
+using namespace rtn;
 
 __global__
-void render(
-    glm::vec3 *fb,
+void render_init(
+    curandState* rand_state,
     int const max_x,
-    int const max_y,
-    glm::vec3 const lower_left_corner,
-    glm::vec3 const horizontal,
-    glm::vec3 const vertical,
-    glm::vec3 const origin)
+    int const max_y)
 {
-    int const i = threadIdx.x + blockIdx.x * blockDim.x;
-    int const j = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < max_x && j < max_y)
+    let x = threadIdx.x + blockIdx.x * blockDim.x;
+    let y = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (x >= max_x || y >= max_y)
     {
-        int const pixel_index = j * max_x + i;
-        let u = static_cast<float>(i) / max_x;
-        let v = static_cast<float>(j) / max_y;
-        ray const r(origin, lower_left_corner + u * horizontal + v * vertical);
-        fb[pixel_index] = color(r);
+        return;
     }
+
+    let pixel_index = y * max_x + x;
+    curand_init(42 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
 __global__
 void render(
     glm::vec3* fb,
+    curandState* rand_state,
     sphere* spheres,
     size_t const num_spheres,
     triangle* triangles,
     size_t const num_triangles,
     int const max_x,
     int const max_y,
-    glm::vec3 const lower_left_corner,
-    glm::vec3 const horizontal,
-    glm::vec3 const vertical,
-    camera const camera)
+    camera const camera,
+    size_t const camera_samples)
 {
-    int const i = threadIdx.x + blockIdx.x * blockDim.x;
-    int const j = threadIdx.y + blockIdx.y * blockDim.y;
-    if (i < max_x && j < max_y)
-    {
-        int const pixel_index = j * max_x + i;
-        let u = static_cast<float>(i) / max_x;
-        let v = static_cast<float>(j) / max_y;
-        ray const r(
-            camera.position,
-            lower_left_corner + u * horizontal + v * vertical);
+    let x = threadIdx.x + blockIdx.x * blockDim.x;
+    let y = threadIdx.y + blockIdx.y * blockDim.y;
 
-        shape* shape = nullptr;
+    if (x >= max_x || y >= max_y)
+    {
+        return;
+    }
+
+    let pixel_index = y * max_x + x;
+    fb[pixel_index] = glm::vec3(0.0f);
+
+    for (size_t i = 0; i < camera_samples; ++i)
+    {
+        glm::vec2 sample(
+            curand_uniform(&rand_state[pixel_index]),
+            curand_uniform(&rand_state[pixel_index]));
+
+        let r = generate_ray(camera, x, y, sample);
+
+        shape* shape_array = nullptr;
         intersection hit;
         for (size_t idx = 0; idx < num_spheres; ++idx)
         {
             let in = intersects(spheres[idx], r);
             if (in.hit && in.distance < hit.distance)
             {
-                shape = spheres;
+                shape_array = spheres;
                 hit = in;
             }
         }
@@ -127,26 +91,30 @@ void render(
             let in = intersects(triangles[idx], r);
             if (in.hit && in.distance < hit.distance)
             {
-                shape = triangles;
+                shape_array = triangles;
                 hit = in;
             }
         }
 
         if (hit.hit)
         {
-            fb[pixel_index] = shape->bsdf_obj.color;
+            fb[pixel_index] += shape_array[hit.index].bsdf_obj.color;
         }
     }
+
+    fb[pixel_index] /= camera_samples;
 }
 
 int main()
 {
-    int const nx = 1200;
-    int const ny = 600;
-    int const tx = 8;
-    int const ty = 8;
+    let width = 1200;
+    let height = 600;
+    let tx = 8;
+    let ty = 8;
 
-    int const num_pixels = nx * ny;
+    let camera_samples = 1024;
+
+    int const num_pixels = width * height;
     size_t const fb_size = num_pixels * sizeof(glm::vec3);
 
     glm::vec3* fb;
@@ -266,35 +234,57 @@ int main()
         },
     };
 
-    clock_t const start = clock();
-    dim3 blocks(nx / tx + 1, ny / ty + 1);
+    camera const cam
+    {
+        glm::half_pi<float>(),
+        static_cast<float const>(width),
+        static_cast<float const>(height),
+        glm::mat4(1.0f),
+    };
+
+    curandState* rand_state;
+    check_cuda_errors(
+        cudaMallocManaged(
+            reinterpret_cast<void**>(&rand_state),
+            num_pixels * sizeof(curandState)));
+
+    let start = std::chrono::system_clock::now();
+
+    dim3 blocks(width / tx + 1, height / ty + 1);
     dim3 threads(tx, ty);
+
+    render_init<<<blocks, threads>>>(
+        rand_state,
+        width,
+        height);
+    check_cuda_errors(cudaGetLastError());
+    check_cuda_errors(cudaDeviceSynchronize());
+
     render<<<blocks, threads>>>(
         fb,
+        rand_state,
         spheres,
         num_spheres,
         triangles,
         num_triangles,
-        nx,
-        ny,
-        glm::vec3(-2.0f, -1.0f, -1.0f),
-        glm::vec3( 4.0f,  0.0f,  0.0f),
-        glm::vec3( 0.0f,  2.0f,  0.0f),
-        camera{ glm::vec3(0.0f,  0.0f,  0.0f) });
+        width,
+        height,
+        cam,
+        camera_samples);
     check_cuda_errors(cudaGetLastError());
     check_cuda_errors(cudaDeviceSynchronize());
-    clock_t const stop = clock();
-    double const timer_seconds =
-        static_cast<double>(stop - start) / CLOCKS_PER_SEC;
+    let stop = std::chrono::system_clock::now();
+    let timer_seconds =
+        static_cast<std::chrono::duration<double>>(stop - start).count();
     std::cout << "Took " << timer_seconds << " seconds\n";
 
-    uint8_t* pixels = new uint8_t[nx * ny * 3];
-    for (int j = ny - 1; j >= 0; --j)
+    uint8_t* pixels = new uint8_t[width * height * 3];
+    for (int j = height - 1; j >= 0; --j)
     {
         #pragma omp parallel for
-        for (int i = 0; i < nx; ++i)
+        for (int i = 0; i < width; ++i)
         {
-            int const pixel_index = j * nx + i;
+            int const pixel_index = j * width + i;
             let ir = static_cast<int>(255.99f * fb[pixel_index].r);
             let ig = static_cast<int>(255.99f * fb[pixel_index].g);
             let ib = static_cast<int>(255.99f * fb[pixel_index].b);
@@ -304,7 +294,7 @@ int main()
         }
     }
 
-    stbi_write_jpg("temporary_name.jpg", nx, ny, 3, pixels, 100);
+    stbi_write_jpg("temporary_name.jpg", width, height, 3, pixels, 100);
     system("temporary_name.jpg");
 
     delete[] pixels;

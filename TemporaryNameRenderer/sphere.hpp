@@ -8,7 +8,7 @@
 #include "ray.hpp"
 #include "shape.hpp"
 
-namespace renderer_temporary_name
+namespace rtn
 {
 struct sphere : public shape
 {
@@ -69,8 +69,6 @@ shader_globals calculate_shader_globals(
     ray const& r,
     intersection const& i)
 {
-    float const pi = 3.141592653589793238463f;
-
     glm::vec3 const position = point(r, i.distance);
     glm::vec3 const normal = normalize(position - s.position);
 
@@ -86,8 +84,8 @@ shader_globals calculate_shader_globals(
         glm::cos(theta) * glm::cos(phi));
 
     glm::vec2 const uv(
-        theta / (2.0f * pi),
-        phi / pi);
+        theta / (2.0f * glm::pi<float>()),
+        phi / glm::pi<float>());
 
     // n.b.: this might use the camera position instead of ray origin in the
     // future.
@@ -115,8 +113,7 @@ template<>
 __device__ __host__
 float surface_area(sphere const& s)
 {
-    float const pi = 3.141592653589793238463f;
-    return 4.0f * pi * s.radius * s.radius;
+    return 4.0f * glm::pi<float>() * s.radius * s.radius;
 }
 }
 

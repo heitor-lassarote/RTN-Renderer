@@ -9,7 +9,7 @@
 #include "ray.hpp"
 #include "shader_globals.hpp"
 
-namespace renderer_temporary_name
+namespace rtn
 {
 struct intersection;
 

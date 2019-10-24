@@ -5,7 +5,7 @@
 #include <crt/host_defines.h>
 #include <glm/glm.hpp>
 
-namespace renderer_temporary_name
+namespace rtn
 {
 enum class bsdf_type
 {
