@@ -15,17 +15,17 @@ struct intersection;
 
 struct shape
 {
-    bsdf bsdf_obj;
+    bsdf bsdf;
 
     __device__ __host__
     shape()
-        : bsdf_obj(bsdf{ bsdf_type::none, glm::vec3() })
+        : bsdf(rtn::bsdf{ bsdf_type::none, glm::vec3() })
     {
     }
 
     __device__ __host__
-    shape(bsdf const& bsdf_obj)
-        : bsdf_obj(bsdf_obj)
+    explicit shape(rtn::bsdf const& bsdf)
+        : bsdf(bsdf)
     {
     }
 };
@@ -43,23 +43,26 @@ float surface_area(Shape const&);
 
 struct intersection
 {
-    float  distance;
-    size_t index;
-    bool   hit;
+    float        distance;
+    bool         hit;
+    shape const* source;
 
     __device__ __host__
-        intersection()
+    intersection()
         : distance(99999999)
-        , index(0)
         , hit(false)
+        , source(nullptr)
     {
     }
 
     __device__ __host__
-    intersection(float const distance, size_t const& index, bool const hit)
+    intersection(
+        float const distance,
+        bool const hit,
+        shape const* const source)
         : distance(distance)
-        , index(index)
         , hit(hit)
+        , source(source)
     {
     }
 
@@ -72,8 +75,8 @@ struct intersection
         }
 
         this->distance = other.distance;
-        this->index = other.index;
         this->hit = other.hit;
+        this->source = other.source;
         return *this;
     }
 };

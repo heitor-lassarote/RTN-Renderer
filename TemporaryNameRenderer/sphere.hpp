@@ -16,7 +16,7 @@ struct sphere : public shape
     float     radius;
 
     __device__ __host__
-    sphere(bsdf const& bsdf, glm::vec3 const& position, float const radius)
+    sphere(rtn::bsdf const& bsdf, glm::vec3 const& position, float const radius)
         : shape(bsdf)
         , position(position)
         , radius(radius)
@@ -31,7 +31,7 @@ struct sphere : public shape
             return *this;
         }
 
-        this->bsdf_obj = other.bsdf_obj;
+        this->bsdf = other.bsdf;
         this->position = other.position;
         this->radius = other.radius;
         return *this;
@@ -54,7 +54,7 @@ intersection intersects(sphere const& s, ray const& r)
         float const t = glm::min(t0, t1);
 
         // Is the smallest t necessarily the smallest distance?
-        return { t, 0, true };
+        return { t, true, &s };
     }
     else
     {

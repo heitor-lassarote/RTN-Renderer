@@ -19,7 +19,7 @@ struct triangle : public shape
     vertex v2;
 
     __device__ __host__
-    triangle(bsdf const& bsdf_obj, vertex v0, vertex v1, vertex v2)
+    triangle(rtn::bsdf const& bsdf_obj, vertex v0, vertex v1, vertex v2)
         : shape(bsdf_obj)
         , v0(std::move(v0))
         , v1(std::move(v1))
@@ -35,7 +35,7 @@ struct triangle : public shape
             return *this;
         }
 
-        this->bsdf_obj = other.bsdf_obj;
+        this->bsdf = other.bsdf;
         this->v0 = other.v0;
         this->v1 = other.v1;
         this->v2 = other.v2;
@@ -82,7 +82,7 @@ intersection intersects(triangle const& t, ray const& ray)
     float const t0 = f * dot(edge2, q);
     if (t0 > epsilon && t0 < 1.0f / epsilon) // ray intersection
     {
-        return { t0, 0, true };
+        return { t0, true, &t };
     }
     else
     {

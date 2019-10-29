@@ -58,6 +58,66 @@ glm::vec2 concentric_sample_disk(glm::vec2 const& sample)
         return radius * glm::vec2(glm::cos(theta), glm::sin(theta));
     }
 }
+
+__device__
+glm::vec2 uniform_random_2d(curandState& rng)
+{
+    return glm::vec2(
+        curand_uniform(&rng),
+        curand_uniform(&rng));
+}
+
+__device__
+void stratified_sample(
+    int const samples,
+    glm::vec2* points,
+    curandState& rng)
+{
+    size_t const size = glm::sqrt(static_cast<float>(samples));
+    for (size_t x = 0; x < size; ++x)
+    {
+        for (size_t y = 0; y < size; ++y)
+        {
+            glm::vec2 const offset(x, y);
+            size_t const idx = y * size + x;
+            points[idx] = (offset + uniform_random_2d(rng))
+                / static_cast<float>(size);
+        }
+    }
+}
+
+__device__ __host__
+glm::vec3 gamma(glm::vec3 const color, float const value)
+{
+    float const inverse_gamma = 1.0f / value;
+    return glm::vec3(
+        glm::pow(color.r, inverse_gamma),
+        glm::pow(color.g, inverse_gamma),
+        glm::pow(color.b, inverse_gamma));
+}
+
+__device__ __host__
+glm::vec3 exposure(glm::vec3 const color, float const value)
+{
+    float const power = glm::pow(2.0f, value);
+    return glm::vec3(
+        glm::pow(color.r, power),
+        glm::pow(color.g, power),
+        glm::pow(color.b, power));
+}
+
+__device__ __host__
+float gaussian(float const sample, float const r)
+{
+    return glm::max(glm::exp(-sample * sample) - glm::exp(-r * r), 0.0f);
+}
+
+__device__ __host__
+float gaussian_2d(glm::vec2 const& sample, float const width)
+{
+    float const r = width / 2.0f;
+    return gaussian(sample.x, r) * gaussian(sample.y, r);
+}
 }
 
 #endif

@@ -66,8 +66,8 @@ camera look_at(
         c.width,
         c.height,
         std::move(look),
+        c.focal_length,
         c.f_number,
-        c.focal_length
     };
 }
 
@@ -76,10 +76,11 @@ ray generate_ray(
     camera const& c,
     float const x,
     float const y,
-    glm::vec2 const& sample)
+    glm::vec2 const& sample,
+    glm::vec2 const& sample_dof)
 {
-    let x_ndc =  ((x + 0.5f) / c.width  * 2.0f - 1.0f);
-    let y_ndc = -((y + 0.5f) / c.height * 2.0f - 1.0f);
+    let x_ndc =  ((x + sample.x) / c.width  * 2.0f - 1.0f);
+    let y_ndc = -((y + sample.y) / c.height * 2.0f - 1.0f);
 
     let d = c.focal_length * glm::tan(c.fov / 2.0f);
     let a = c.width / c.height;
@@ -91,7 +92,7 @@ ray generate_ray(
 
     let r = c.focal_length / (2.0f * c.f_number);
     let circle_sample = glm::vec4(
-        r * concentric_sample_disk(sample),
+        r * concentric_sample_disk(sample_dof),
         0.0f,
         1.0f);
     let cp = c.world_matrix * circle_sample;

@@ -93,6 +93,8 @@
     <ClInclude Include="camera.hpp" />
     <ClInclude Include="let.hpp" />
     <ClInclude Include="ray.hpp" />
+    <ClInclude Include="renderer.hpp" />
+    <ClInclude Include="scene.hpp" />
     <ClInclude Include="shader_globals.hpp" />
     <ClInclude Include="shape.hpp" />
     <ClInclude Include="sphere.hpp" />

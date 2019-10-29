@@ -40,6 +40,12 @@
     <ClInclude Include="utility.hpp">
       <Filter>headers</Filter>
     </ClInclude>
+    <ClInclude Include="renderer.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="scene.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="headers">
