@@ -7,20 +7,33 @@
 #include <crt/host_defines.h>
 #include <glm/glm.hpp>
 
-#include "shape.hpp"
+#include "bsdf.hpp"
+#include "shader_globals.hpp"
 #include "vertex.hpp"
 
 namespace rtn
 {
-struct triangle : public shape
+struct intersection;
+
+struct triangle
 {
+    bsdf bsdf;
     vertex v0;
     vertex v1;
     vertex v2;
 
     __device__ __host__
-    triangle(rtn::bsdf const& bsdf_obj, vertex v0, vertex v1, vertex v2)
-        : shape(bsdf_obj)
+    triangle()
+        : bsdf(bsdf_type::none, glm::vec3())
+        , v0(glm::vec3(), glm::vec3(), glm::vec2())
+        , v1(glm::vec3(), glm::vec3(), glm::vec2())
+        , v2(glm::vec3(), glm::vec3(), glm::vec2())
+    {
+    }
+
+    __device__ __host__
+    triangle(rtn::bsdf const& bsdf, vertex v0, vertex v1, vertex v2)
+        : bsdf(bsdf)
         , v0(std::move(v0))
         , v1(std::move(v1))
         , v2(std::move(v2))
@@ -43,7 +56,46 @@ struct triangle : public shape
     }
 };
 
-template<>
+struct intersection
+{
+    float           distance;
+    bool            hit;
+    triangle const* source;
+
+    __device__ __host__
+        intersection()
+        : distance(99999999)
+        , hit(false)
+        , source(nullptr)
+    {
+    }
+
+    __device__ __host__
+        intersection(
+            float const distance,
+            bool const hit,
+            triangle const* const source)
+        : distance(distance)
+        , hit(hit)
+        , source(source)
+    {
+    }
+
+    __device__ __host__
+        intersection& operator=(intersection other)
+    {
+        if (&other == this)
+        {
+            return *this;
+        }
+
+        this->distance = other.distance;
+        this->hit = other.hit;
+        this->source = other.source;
+        return *this;
+    }
+};
+
 __device__ __host__
 intersection intersects(triangle const& t, ray const& ray)
 {
@@ -92,6 +144,7 @@ intersection intersects(triangle const& t, ray const& ray)
     }
 }
 
+__device__ __host__
 glm::vec2 barycenter_to_vertex(
     glm::vec2 const& t0,
     glm::vec2 const& t1,
@@ -103,6 +156,7 @@ glm::vec2 barycenter_to_vertex(
         (bc.x * t0.y) + (bc.y * t1.y) + (bc.z * t2.y));
 }
 
+__device__ __host__
 glm::vec3 barycenter_to_vertex(
     glm::vec3 const& t0,
     glm::vec3 const& t1,
@@ -115,66 +169,57 @@ glm::vec3 barycenter_to_vertex(
         (bc.x * t0.z) + (bc.y * t1.z) + (bc.z * t2.z));
 }
 
+__device__ __host__
 glm::vec3 barycenter_weight(
     glm::vec3 const& p0,
     glm::vec3 const& p1,
     glm::vec3 const& p2,
     glm::vec3 const& p)
 {
-    glm::vec3 const u = cross(
-        glm::vec3(p2.x - p0.x, p1.x - p0.x, p0.x - p.x),
-        glm::vec3(p2.y - p0.y, p1.y - p0.y, p0.y - p.y));
+    let d00 = glm::dot(p0, p0);
+    let d01 = glm::dot(p0, p1);
+    let d11 = glm::dot(p1, p1);
+    let d20 = glm::dot(p2, p0);
+    let d21 = glm::dot(p2, p1);
 
-    // pts and p have integer values as coordinates, so |u.Z| < 1 means
-    // u.Z is 0, that means triangle is degenerate, in this case return
-    // something with negative coordinates.
-    float const epsilon = 1e-2f;
-    if (abs(u.z) > epsilon)
-    {
-        return glm::vec3(
-            1.0f - ((u.x + u.y) / u.z),
-            u.y / u.z,
-            u.x / u.z);
-    }
+    let inverse_d = d00 * d11 - d01 * d01;
 
-    return glm::vec3(-1.0f, 1.0f, 1.0f);
+    let v = (d11 * d20 - d01 * d21) / inverse_d;
+    let w = (d00 * d21 - d01 * d20) / inverse_d;
+
+    return glm::vec3(1.0f - v - w, v, w);
 }
 
-template<>
 __device__ __host__
 shader_globals calculate_shader_globals(
     triangle const& t,
     ray const& r,
     intersection const& i)
 {
-    glm::vec3 const p0 = t.v0.position;
-    glm::vec3 const p1 = t.v1.position;
-    glm::vec3 const p2 = t.v2.position;
-    glm::vec3 const n0 = t.v0.normal;
-    glm::vec3 const n1 = t.v1.normal;
-    glm::vec3 const n2 = t.v2.normal;
-    glm::vec2 const t0 = t.v0.uv;
-    glm::vec2 const t1 = t.v1.uv;
-    glm::vec2 const t2 = t.v2.uv;
+    let p0 = t.v0.position;
+    let p1 = t.v1.position;
+    let p2 = t.v2.position;
+    let n0 = t.v0.normal;
+    let n1 = t.v1.normal;
+    let n2 = t.v2.normal;
+    let t0 = t.v0.uv;
+    let t1 = t.v1.uv;
+    let t2 = t.v2.uv;
 
-    glm::vec3 const position = point(r, i.distance);
-    glm::vec3 const barycenter = barycenter_weight(p0, p1, p2, position);
-    glm::vec3 const normal = normalize(barycenter.x * n0 + barycenter.z * n1 + barycenter.y * n2);
+    let position = point(r, i.distance);
+    let bc = barycenter_weight(p0, p1, p2, position);
+    let normal = normalize((bc.x * n0) + (bc.y * n1) + (bc.z * n2));
 
-    glm::vec2 const uv = barycenter_to_vertex(t0, t1, t2, barycenter);
+    let texture_coordinates = (t0 * bc.x) + (t1 * bc.y) + (t2 * bc.z);
 
-    // n.b.: the tangent should be defined in terms of the normal and the
-    // Gram-Schmidt process.
-    glm::vec3 const tangent_u = p1 - p0;
-    glm::vec3 const tangent_v = p2 - p0;
+    let tangent_u = glm::abs(normal.x) >= glm::abs(normal.y)
+        ? glm::normalize(glm::vec3(normal.z, 0.0f, -normal.x))
+        : glm::normalize(glm::vec3(0.0f, -normal.z, normal.y));
+    let tangent_v = glm::cross(normal, tangent_u);
 
-    // n.b.: this might use the camera position instead of ray origin in the
-    // future.
-    glm::vec3 const view_dir = normalize(position - r.origin);
+    let view_dir = -r.direction;
 
-    glm::vec3 const light_direction(0.0f);
-    glm::vec3 const light_point(0.0f);
-    glm::vec3 const light_normal(0.0f);
+    let uv = glm::vec2(bc.x, bc.y);
 
     return
     {
@@ -183,14 +228,11 @@ shader_globals calculate_shader_globals(
         uv,
         tangent_u,
         tangent_v,
+        texture_coordinates,
         view_dir,
-        light_direction,
-        light_point,
-        light_normal,
     };
 }
 
-template<>
 __device__ __host__
 float surface_area(triangle const& t)
 {

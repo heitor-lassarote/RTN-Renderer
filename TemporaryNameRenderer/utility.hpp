@@ -6,6 +6,7 @@
 #include <glm/vec2.hpp>
 
 #include "let.hpp"
+#include "triangle.hpp"
 
 namespace rtn
 {
@@ -117,6 +118,64 @@ float gaussian_2d(glm::vec2 const& sample, float const width)
 {
     float const r = width / 2.0f;
     return gaussian(sample.x, r) * gaussian(sample.y, r);
+}
+
+__device__ __host__
+glm::vec3 low_discrepancy_sample_triangle(float const u)
+{
+    uint32_t const uf = u * (1ull << 32);
+
+    glm::vec2 a(1.0f, 0.0f);
+    glm::vec2 b(0.0f, 1.0f);
+    glm::vec2 c(0.0f, 0.0f);
+    for (size_t i = 0; i < 16; ++i)
+    {
+        int const d = (uf >> (2 * (15 - i))) & 0x3;
+
+        glm::vec2 an;
+        glm::vec2 bn;
+        glm::vec2 cn;
+        switch (d)
+        {
+        case 0:
+            an = (b + c) * 0.5f;
+            bn = (a + c) * 0.5f;
+            cn = (a + b) * 0.5f;
+            break;
+        case 1:
+            an = a;
+            bn = (a + b) * 0.5f;
+            cn = (a + c) * 0.5f;
+            break;
+        case 2:
+            an = (b + a) * 0.5f;
+            bn = b;
+            cn = (b + c) * 0.5f;
+            break;
+        default:
+            an = (c + a) * 0.5f;
+            bn = (c + b) * 0.5f;
+            cn = c;
+            break;
+        }
+
+        a = an;
+        b = bn;
+        c = cn;
+    }
+
+    glm::vec2 const r = (a + b + c) / 3.0f;
+    return { r.x, r.y, 1 - r.x - r.y };
+}
+
+__device__
+glm::vec3 uniform_sample_hemisphere(glm::vec2 const& sample)
+{
+    let z = 1.0f - sample.x;
+    let s = glm::sqrt(1.0f - z * z);
+    let phi = glm::two_pi<float>() * sample.y;
+
+    return glm::vec3(s * glm::cos(phi), s * glm::sin(phi), z);
 }
 }
 

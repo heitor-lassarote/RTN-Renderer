@@ -13,12 +13,6 @@
     <ClInclude Include="vec3.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="sphere.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="shape.hpp">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="bsdf.hpp">
       <Filter>headers</Filter>
     </ClInclude>
@@ -44,6 +38,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="scene.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="sample_scenes.hpp">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
